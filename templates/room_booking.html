@@ -1,0 +1,14 @@
+<form method="POST">
+{% csrf_token %}
+
+<label>Select Room</label>
+<select name="room">
+{% for room in rooms %}
+<option value="{{ room.id }}">
+{{ room.name }} - ₹{{ room.price }}
+</option>
+{% endfor %}
+</select>
+
+<button type="submit">Book Room</button>
+</form>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Email</title>
+</head>
+<body>
+
+<h2>Enter Email</h2>
+
+<form method="post" action="/send-otp/">
+{% csrf_token %}
+
+<input type="email" name="email" placeholder="Enter your email" required>
+<br><br>
+
+<button type="submit">Send OTP</button>
+
+</form>
+
+<br>
+
+<a href="/login/">Login</a>
+
+</body>
+</html>

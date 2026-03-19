@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+</head>
+<body>
+
+<h2>Customer Login</h2>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Login</button>
+
+<form method="POST">
+{% csrf_token %}
+
+<input type="email" name="email" placeholder="Enter Email">
+
+<button type="submit">Send OTP</button>
+
+</form>
+</form>
+
+</body>
+</html>

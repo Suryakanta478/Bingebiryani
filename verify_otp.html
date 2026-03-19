@@ -1,0 +1,10 @@
+<form method="POST" action="/verify-otp/">
+{% csrf_token %}
+
+<input type="hidden" name="phone" value="{{phone}}">
+
+<input type="text" name="otp" placeholder="Enter OTP">
+
+<button type="submit">Verify OTP</button>
+
+</form>

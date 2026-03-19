@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Room Booking</title>
+</head>
+
+<body>
+
+<h1>Room Booking</h1>
+
+<form method="post">
+{% csrf_token %}
+
+<label>Room</label>
+<select name="room">
+
+{% for room in rooms %}
+<option value="{{ room.id }}">{{ room.name }}</option>
+{% endfor %}
+
+</select>
+<br><br>
+
+<label>Amount</label>
+<input type="number" name="amount" value="500">
+
+<br><br>
+
+<button type="submit">Book Now</button>
+
+</form>
+
+</body>
+</html>

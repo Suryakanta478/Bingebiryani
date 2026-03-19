@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Payment</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+
+<h2>Complete Your Payment</h2>
+<button id="pay-btn">Pay Now</button>
+
+<form id="verify-form" method="POST" action="/verify-payment/">
+    {% csrf_token %}
+    <input type="hidden" name="razorpay_order_id" id="order_id">
+    <input type="hidden" name="razorpay_payment_id" id="payment_id">
+    <input type="hidden" name="razorpay_signature" id="signature">
+</form>
+
+<script>
+var options = {
+    "key": "{{ rzp_test_SPYWvGotl2ezQR }}",
+    "amount": "{{ amount }}00",   // amount in paise
+    "currency": "INR",
+    "name": "Binge Biryani",
+    "order_id": "{{ order_id }}",
+
+    "handler": function (response){
+
+        // Fill hidden inputs
+        document.getElementById("order_id").value = response.razorpay_order_id;
+        document.getElementById("payment_id").value = response.razorpay_payment_id;
+        document.getElementById("signature").value = response.razorpay_signature;
+
+        // Submit to backend for verification
+        document.getElementById("verify-form").submit();
+    }
+};
+
+var rzp = new Razorpay(options);
+
+document.getElementById("pay-btn").onclick = function(e){
+    rzp.open();
+    e.preventDefault();
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,297 @@
+# 🔹 IMPORTS (clean)
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse, HttpResponse
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout
+from django.core.mail import send_mail
+from django.utils import timezone
+from django.db.models import Sum
+from datetime import date, timedelta
+import random, time
+from hotel import views
+from .models import RoomCategory, Room, RoomBooking, FoodItem, PartyBooking, FoodOrder
+
+import razorpay
+
+
+# 🔹 OTP SEND
+def send_otp(email, otp):
+    send_mail(
+        "Your OTP",
+        f"Your OTP is {otp}",
+        "your_email@gmail.com",
+        [email],
+        fail_silently=False,
+    )
+
+
+# 🔹 HOME (login check)
+def home(request):
+    return render(request, "home.html")
+
+
+# 🔹 SIGNUP (OTP FLOW)
+def signup(request):
+    if request.method == "POST":
+
+        username = request.POST.get("username")
+        email = request.POST.get("email")
+        password = request.POST.get("password")
+
+        if User.objects.filter(email=email).exists():
+            return HttpResponse("Email already exists")
+
+        request.session['temp'] = {
+            "username": username,
+            "email": email,
+            "password": password
+        }
+
+        otp = str(random.randint(1000, 9999))
+        request.session['otp'] = otp
+        request.session['time'] = time.time()
+
+        send_otp(email, otp)
+        return redirect("verify_signup")
+
+    return render(request, "signup.html")
+
+
+# 🔹 VERIFY SIGNUP OTP
+def verify_signup(request):
+    if request.method == "POST":
+
+        if time.time() - request.session.get("time", 0) > 300:
+            return HttpResponse("OTP Expired")
+
+        if request.POST.get("otp") == request.session.get("otp"):
+
+            data = request.session.get("temp")
+
+            user = User.objects.create_user(
+                username=data["username"],
+                email=data["email"],
+                password=data["password"]
+            )
+
+            login(request, user)
+            request.session.flush()
+
+            return redirect("/")
+
+    return render(request, "verify.html")
+
+
+# 🔹 LOGIN + OTP
+def login_user(request):
+    if request.method == "POST":
+
+        email = request.POST.get("email")
+        password = request.POST.get("password")
+
+        try:
+            user_obj = User.objects.get(email=email)
+            user = authenticate(username=user_obj.username, password=password)
+        except:
+            user = None
+
+        if user:
+            otp = str(random.randint(1000, 9999))
+
+            request.session["login_user"] = user.id
+            request.session["otp"] = otp
+            request.session["time"] = time.time()
+
+            send_otp(email, otp)
+            return redirect("verify_login")
+
+    return render(request, "login.html")
+
+
+# 🔹 VERIFY LOGIN OTP
+def verify_login(request):
+    if request.method == "POST":
+
+        if time.time() - request.session.get("time", 0) > 300:
+            return HttpResponse("OTP Expired")
+
+        if request.POST.get("otp") == request.session.get("otp"):
+
+            user = User.objects.get(id=request.session.get("login_user"))
+            login(request, user)
+            request.session.flush()
+
+            return redirect("/")
+
+    return render(request, "verify.html")
+
+
+# 🔹 FORGOT PASSWORD
+def forgot(request):
+    if request.method == "POST":
+
+        email = request.POST.get("email")
+
+        if not User.objects.filter(email=email).exists():
+            return HttpResponse("User not found")
+
+        otp = str(random.randint(1000, 9999))
+
+        request.session["email"] = email
+        request.session["otp"] = otp
+        request.session["time"] = time.time()
+
+        send_otp(email, otp)
+        return redirect("reset")
+
+    return render(request, "forgot.html")
+
+
+# 🔹 RESET PASSWORD
+def reset(request):
+    if request.method == "POST":
+
+        if time.time() - request.session.get("time", 0) > 300:
+            return HttpResponse("OTP Expired")
+
+        if request.POST.get("otp") == request.session.get("otp"):
+
+            user = User.objects.get(email=request.session.get("email"))
+            user.set_password(request.POST.get("password"))
+            user.save()
+
+            request.session.flush()
+            return redirect("login")
+
+    return render(request, "reset.html")
+
+
+# 🔹 LOGOUT
+def logout_view(request):
+    logout(request)
+    return redirect("/")
+
+
+# 🔹 PROFILE
+@login_required
+def profile(request):
+    bookings = RoomBooking.objects.filter(user=request.user)
+    food_orders = FoodOrder.objects.filter(user=request.user)
+
+    return render(request, "profile.html", {
+        "bookings": bookings,
+        "food_orders": food_orders
+    })
+
+
+# 🔹 ROOM BOOKING
+@login_required
+def book_room(request):
+
+    rooms = Room.objects.all()
+
+    if request.method == "POST":
+
+        room = Room.objects.get(id=request.POST.get("room"))
+
+        if not room.available:
+            return HttpResponse("Room not available")
+
+        RoomBooking.objects.create(
+            user=request.user,
+            name=request.POST.get("name"),
+            phone=request.POST.get("phone"),
+            room=room,
+            check_in=request.POST.get("checkin"),
+            check_out=request.POST.get("checkout")
+        )
+
+        room.available = False
+        room.save()
+
+        return redirect("/payment/")
+
+    return render(request, "book_room.html", {"rooms": rooms})
+
+
+# 🔹 DASHBOARD
+@login_required
+def dashboard(request):
+
+    earnings = RoomBooking.objects.filter(
+        payment_status=True
+    ).aggregate(Sum('room__price'))
+
+    food_sales = FoodOrder.objects.filter(
+        paid=True
+    ).aggregate(Sum('total_price'))
+
+    return render(request, "dashboard.html", {
+        "room_earnings": earnings,
+        "food_earnings": food_sales
+    })
+
+
+# 🔹 MENU
+@login_required
+def menu(request):
+    foods = FoodItem.objects.all()
+    return render(request, "menu.html", {"foods": foods})
+
+
+# 🔹 PARTY BOOKING
+@login_required
+def party(request):
+    if request.method == "POST":
+
+        people = int(request.POST.get("people"))
+        price = people * 500
+
+        PartyBooking.objects.create(
+            name=request.POST.get("name"),
+            phone=request.POST.get("phone"),
+            people=people,
+            date=request.POST.get("date")
+        )
+
+        request.session["price"] = price
+        return redirect("/payment/")
+
+    return render(request, "party.html")
+
+
+# 🔹 PAYMENT
+@login_required
+def payment(request):
+
+    client = razorpay.Client(
+        auth=("rzp_test_xxxxx", "secret_key")
+    )
+
+    order = client.order.create({
+        "amount": 50000,
+        "currency": "INR",
+        "payment_capture": "1"
+    })
+
+    return render(request, "payment.html", {"order": order})
+
+
+# 🔹 PAYMENT SUCCESS
+@login_required
+def payment_success(request):
+    return JsonResponse({"status": "Payment Successful"})
+
+
+# 🔹 PAYMENT HISTORY
+@login_required
+def payment_history(request):
+    payments = RoomBooking.objects.filter(
+        user=request.user,
+        payment_status=True
+    )
+    return render(request, "payments.html", {"payments": payments})
+
+def verify_otp(request):
+    return HttpResponse("OTP page")

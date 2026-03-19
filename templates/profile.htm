@@ -1,0 +1,12 @@
+<h2>My Profile</h2>
+
+<h3>My Bookings</h3>
+{% for b in bookings %}
+<p>Room {{ b.room }} - {{ b.check_in }}</p>
+{% endfor %}
+
+<h3>My Food Orders</h3>
+{% for f in food_orders %}
+<p>{{ f.food.name }} - {{ f.quantity }}</p>
+{% endfor %}
+

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>OTP Verify</title>
+</head>
+<body>
+
+<h2>Enter OTP</h2>
+
+<form method="POST">
+{% csrf_token %}
+<input type="text" name="otp" placeholder="Enter OTP">
+<button type="submit">Verify</button>
+</form>
+
+<br>
+
+<form method="POST" action="{% url 'resend_otp' %}">
+    {% csrf_token %}
+    <button type="submit">Resend OTP</button>
+</form>
+
+</body>
+</html>

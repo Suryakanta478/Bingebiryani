@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Forgot Password</title>
+</head>
+<body>
+
+<h2>Forgot Password</h2>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <input type="email" name="email" placeholder="Enter Email" required>
+    
+    <br><br>
+    
+    <button type="submit">Send OTP</button>
+   <a href="{% url 'resend_otp' %}">Resend OTP</a>
+</form>
+
+</body>
+</html>
