@@ -1,4 +1,3 @@
-# 🔹 IMPORTS (clean)
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
@@ -18,6 +17,45 @@ from django.core.mail import EmailMessage
 import random
 import time
 from django.conf import settings
+from django.contrib.auth.models import User
+from .utils import auto_bill
+from django.http import HttpResponse
+
+def verify_payment(request):
+    return HttpResponse("Payment Verified"
+)
+
+def failure(request):
+    return HttpResponse("Payment Failed ❌")
+
+def success(request):
+    return render(request, "success.html")
+
+def party_booking(request):
+    if request.method == "POST":
+        bill = auto_bill(request)
+        return render(request, "bill.html", bill)
+
+    foods = Food.objects.all()
+    return render(request, "party.html", {"foods": foods})
+
+def room_booking(request):
+    if request.method == "POST":
+        bill = auto_bill(request)
+
+        # 🔹 ROOM PRICE ADD
+        room_price = 2000   # ya DB se lao
+        bill["total"] += room_price
+        bill["pay_amount"] += room_price
+
+        return render(request, "bill.html", bill)
+
+def food_order(request):
+    if request.method == "POST":
+        bill = auto_bill(request)
+        return render(request, "bill.html", bill)
+
+
 
 def resend_otp(request):
     email = request.session.get("email")   # session se email lo
@@ -33,7 +71,7 @@ def resend_otp(request):
 
     send_otp(email, otp)   # tumhara existing function
 
-    return redirect("verify_login")
+    return redirect("verify_otp.html")
 
 
 # 🔹 OTP SEND
@@ -41,11 +79,10 @@ def send_otp(email, otp):
     send_mail(
         "Your OTP",
         f"Your OTP is {otp}",
-        "bingebiriyni@gmail.com",
+        settings.EMAIL_HOST_USER,
         [email],
         fail_silently=False,
     )
-
 
 # 🔹 HOME (login check)
 def home(request):
@@ -55,6 +92,10 @@ def home(request):
     return render(request, "home.html")
 
 # 🔹 SIGNUP (OTP FLOW)
+import uuid
+import random
+import time
+
 def signup(request):
     if request.method == "POST":
 
@@ -71,6 +112,12 @@ def signup(request):
             "password": password
         }
 
+        if User.objects.filter(username=username).exists():
+            return HttpResponse("Username already exists")
+
+        # signup view me (tera same logic)
+        username = email.split("@")[0] + str(uuid.uuid4())[:4]
+
         otp = str(random.randint(1000, 9999))
         request.session['otp'] = otp
         request.session['time'] = time.time()
@@ -80,8 +127,8 @@ def signup(request):
 
     return render(request, "signup.html")
 
-
 # 🔹 VERIFY SIGNUP OTP
+
 def verify_signup(request):
     if request.method == "POST":
 
@@ -92,46 +139,70 @@ def verify_signup(request):
 
             data = request.session.get("temp")
 
-            user = User.objects.create_user(
+            # 🔥 check if user already exists
+            user, created = User.objects.get_or_create(
                 username=data["username"],
-                email=data["email"],
-                password=data["password"]
+                defaults={
+                    "email": data["email"]
+                }
             )
 
+            # 🔐 set password only if new user
+            if created:
+                user.set_password(data["password"])
+                user.save()
+
+            # ✅ AUTO LOGIN
             login(request, user)
 
+            # 🧹 VERY IMPORTANT
+            login(request, user)
+
+# ✅ sirf unwanted data hatao
+            request.session.pop("otp", None)
+            request.session.pop("time", None)
+            request.session.pop("temp", None)
+
+            # ✅ HOME PAGE
             return redirect("home")
+
+        else:
+            return HttpResponse("Wrong OTP ❌")
 
     return render(request, "verify.html")
 
-
-# 🔹 LOGIN + OTP
 def login_user(request):
     if request.method == "POST":
-        email = request.POST.get("email")
+        username = request.POST.get("username")
         password = request.POST.get("password")
 
+        print("USERNAME:", username)
+
+        # 🔴 user find karo username se
         try:
-            username = request.POST.get("username")
-            password = request.POST.get("password")
-            user = authenticate(request, username=username, password=password)
-        except:
-            return HttpResponse("Email not found ❌")
+            user_obj = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return HttpResponse("User not found ❌")
+
+        # 🔴 authenticate
+        user = authenticate(request, username=username, password=password)
 
         if user is not None:
             otp = str(random.randint(1000, 9999))
 
-            # Save session data
+            print("OTP:", otp)
+            print("EMAIL:", user_obj.email)
+
+            # session save
             request.session["login_user"] = user.id
             request.session["otp"] = otp
             request.session["time"] = time.time()
-            request.session["email"] = user.email
+            request.session["email"] = user_obj.email
 
-            # Send OTP to email
-            send_otp(user.email, otp)
+            # 🔥 send OTP on email
+            send_otp(user_obj.email, otp)
 
-            # Redirect to OTP verification page
-            return redirect("verify_login")
+            return redirect("home")
         else:
             return HttpResponse("Wrong password ❌")
 
@@ -141,15 +212,31 @@ def login_user(request):
 def verify_login(request):
     if request.method == "POST":
 
+        # OTP expire check
         if time.time() - request.session.get("time", 0) > 300:
-            return HttpResponse("OTP Expired")
+            return HttpResponse("OTP Expired ⏰")
 
+        # OTP verify
         if request.POST.get("otp") == request.session.get("otp"):
 
+            # Get user from session
             user = User.objects.get(id=request.session.get("login_user"))
+
+            # Auto login
             login(request, user)
 
-            return redirect ("home")
+            # Clear session
+            login(request, user)
+
+# ✅ sirf unwanted data hatao
+            request.session.pop("otp", None)
+            request.session.pop("time", None)
+            request.session.pop("temp", None)
+
+            return redirect("home")
+
+        else:
+            return HttpResponse("Wrong OTP ❌")
 
     return render(request, "verify.html")
 
@@ -279,18 +366,19 @@ client = razorpay.Client(
 
 @login_required
 def party(request):
-    foods = FoodItem.objects.all()
 
     if request.method == "POST":
         try:
+            # 🔹 Get form data
             name = request.POST.get("name")
             phone = request.POST.get("phone")
-            people = int(request.POST.get("people", 0))
+            people = int(request.POST.get("people", 1))  # default to 1
             date = request.POST.get("date")
+            food_ids = request.POST.getlist("food[]")
+            quantities = request.POST.getlist("qty[]")
             payment_type = request.POST.get("payment")
-            food_ids = request.POST.getlist('food[]')
-            quantities = request.POST.getlist("quantity")
 
+            # 🔹 Calculate total
             total = 0
 
             # 🔹 CREATE BOOKING
@@ -308,19 +396,16 @@ def party(request):
             for i in range(len(food_ids)):
                 if quantities[i] == "":
                     continue
-
                 qty = int(quantities[i])
                 if qty <= 0:
                     continue
 
                 food = FoodItem.objects.get(id=food_ids[i])
-
                 BookingItem.objects.create(
                     booking=booking,
                     food_item=food,
                     quantity=qty
                 )
-
                 total += food.price * qty
 
             # 🔹 PER PERSON COST
@@ -352,11 +437,9 @@ def party(request):
             # 🔹 CREATE PDF
             buffer = io.BytesIO()
             p = canvas.Canvas(buffer)
-
             y = 800
             p.drawString(200, y, "Party Booking Bill")
             y -= 40
-
             p.drawString(50, y, f"Name: {name}")
             y -= 20
             p.drawString(50, y, f"Email: {request.user.email}")
@@ -368,19 +451,13 @@ def party(request):
 
             for item in booking.items.all():
                 price = item.food_item.price * item.quantity
-                p.drawString(
-                    50,
-                    y,
-                    f"{item.food_item.name} x {item.quantity} = ₹{price}"
-                )
+                p.drawString(50, y, f"{item.food_item.name} x {item.quantity} = ₹{price}")
                 y -= 20
 
             y -= 20
             p.drawString(50, y, f"Total: ₹{total}")
-
             p.showPage()
             p.save()
-
             pdf = buffer.getvalue()
             buffer.close()
 
@@ -391,7 +468,6 @@ def party(request):
                 settings.EMAIL_HOST_USER,
                 [request.user.email]
             )
-
             email.attach("bill.pdf", pdf, "application/pdf")
             email.send(fail_silently=True)
 
@@ -475,59 +551,51 @@ def payment_history(request):
 def verify_otp(request):
     return HttpResponse("OTP page")
 
-# ORDER ID
-order_id = "ORD" + str(random.randint(10000, 99999))
-
-food_ids = request.POST.getlist('food[]')
-qtys = request.POST.getlist('qty[]')
-
-items = []
-total = 0
-
-for i in range(len(food_ids)):
-    if food_ids[i]:
-        food = FoodItem.objects.get(id=food_ids[i])  # admin menu se data
-
-        qty = int(qtys[i])
-        price = food.price
-        item_total = price * qty
-
-        total += item_total
-
-        items.append({
-            "name": food.name,
-            "qty": qty,
-            "price": price,
-            "total": item_total
-        })
-
 # PAYMENT
-
 @login_required
 def party(request):
+    import random
+
     foods = FoodItem.objects.all()
 
     if request.method == "POST":
-
-        # 👉 YAHAN paste karo
         food_ids = request.POST.getlist('food[]')
         quantities = request.POST.getlist('qty[]')
         payment_type = request.POST.get("payment_type")
 
-        try:
-            # baaki code
-if payment_type == "advance":
-    paid = int(total * 0.3)
-else:
-    paid = total
+        items = []
+        total = 0
 
-# FINAL DATA
-data = {
-    "order_id": order_id,
-    "items": items,
-    "total": total,
-    "paid": paid
-}
+        for i in range(len(food_ids)):
+            food = FoodItem.objects.get(id=food_ids[i])
+            qty = int(quantities[i])
+            price = food.price * qty
 
-def failure(request):
-    return render(request, "failure.html")
+            total += price
+
+            items.append({
+                "name": food.name,
+                "qty": qty,
+                "price": price
+            })
+
+        # ✅ ORDER ID generate
+        order_id = "ORD" + str(random.randint(10000, 99999))
+
+        # ✅ PAYMENT LOGIC
+        if payment_type == "advance":
+            paid = int(total * 0.3)
+        else:
+            paid = total
+
+        # ✅ FINAL DATA
+        data = {
+            "order_id": order_id,
+            "items": items,
+            "total": total,
+            "paid": paid
+        }
+
+        return render(request, "payment.html", data)
+
+    return render(request, "party.html", {"foods": foods})

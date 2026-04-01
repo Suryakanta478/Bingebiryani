@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path
 from hotel import views
+from django.urls import path, include
 
 urlpatterns = [
 
@@ -14,7 +15,7 @@ urlpatterns = [
     # 🔹 Authentication
     path('signup/', views.signup, name='signup'),
     path('verify-signup/', views.verify_signup, name='verify_signup'),
-
+    path('accounts/', include('allauth.urls')),
     path('login/', views.login_user, name='login'),
     path('verify-login/', views.verify_login, name='verify_login'),
 
