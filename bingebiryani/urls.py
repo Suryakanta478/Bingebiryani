@@ -1,7 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
 from hotel import views
-from django.contrib.sitemaps.views import sitemap
 
 from django.contrib.sitemaps.views import sitemap
 from hotel.sitemaps import StaticSitemap
@@ -11,9 +10,8 @@ sitemaps = {
 }
 
 urlpatterns = [
-    ...
+    # ✅ Sitemap
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='sitemap'),
-]
 
     # Admin
     path('admin/', admin.site.urls),
@@ -30,19 +28,19 @@ urlpatterns = [
     path('verify-login/', views.verify_login, name='verify_login'),
     path('logout/', views.logout_view, name='logout'),
 
-    # OTP System
+    # OTP
     path('send-otp/', views.send_otp, name='send_otp'),
     path('verify-otp/', views.verify_otp, name='verify_otp'),
     path('resend-otp/', views.resend_otp, name='resend_otp'),
 
-    # Forgot / Reset Password
+    # Password
     path('forgot/', views.forgot, name='forgot'),
     path('reset/', views.reset, name='reset'),
 
     # User
     path('profile/', views.profile, name='profile'),
 
-    # Hotel Features
+    # Hotel
     path('booking/', views.book_room, name='booking'),
     path('menu/', views.menu, name='menu'),
     path('party/', views.party, name='party'),
@@ -50,9 +48,9 @@ urlpatterns = [
 
     # Payment
     path('payment/', views.payment, name='payment'),
-    path("verify-payment/", views.verify_payment, name="verify_payment"),
-    path("success/", views.success, name="success"),
-    path("failure/", views.failure, name="failure"),
+    path('verify-payment/', views.verify_payment, name='verify_payment'),
+    path('success/', views.success, name='success'),
+    path('failure/', views.failure, name='failure'),
     path('payment-history/', views.payment_history, name='payment_history'),
 
     # Dashboard
