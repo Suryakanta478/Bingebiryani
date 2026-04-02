@@ -1,9 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-
-</style>
-
     <title>Binge Biryani</title>
 
     <!-- Bootstrap CSS -->
@@ -13,9 +10,9 @@
 
 <body>
 
-<!-- 🔹 Navbar -->
+<!-- Navbar -->
 <nav class="navbar navbar-dark bg-dark px-3">
-    <a class="navbar-brand text-white">Binge Biryani 🍗</a>
+    <a href="/" class="navbar-brand text-white">Binge Biryani 🍗</a>
 
     <div>
         <a href="/payment-history/" class="btn btn-warning btn-sm">Payment History</a>
@@ -31,29 +28,23 @@
     </div>
 </nav>
 
-<!-- 🔹 Main Content -->
+<!-- Main Content -->
 <div class="container mt-4 text-center">
 
     {% if user.is_authenticated %}
 
-        <!-- Welcome Section -->
         <h1>Welcome to Binge Biryani 🍗</h1>
         <h2>Hello, {{ user.username }}</h2>
         <p>Best Biryani & Hotel Booking</p>
 
         <br>
 
-        <!-- Main Buttons -->
         <a href="/menu/" class="btn btn-warning m-2">Food Menu</a>
         <a href="/room/" class="btn btn-info m-2">Room Booking</a>
         <a href="/party/" class="btn btn-success m-2">Party Booking</a>
 
-        <br><br>
-
-
     {% else %}
 
-        <!-- Guest View -->
         <h1>Welcome to Binge Biryani 🍗</h1>
 
         <a href="/login/" class="btn btn-success m-2">Login</a><br>
