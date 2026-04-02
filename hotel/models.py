@@ -103,7 +103,8 @@ class CartItem(models.Model):
     food = models.ForeignKey(FoodItem, on_delete=models.CASCADE)
     quantity = models.IntegerField(default=1) 
 
-class FoodOrder(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    item = models.CharField(max_length=100)
-    price = models.IntegerField()
+#class FoodOrder(models.Model):
+ #   user = models.ForeignKey(User, on_delete=models.CASCADE)
+  #  item = models.CharField(max_length=100)
+   # price = models.IntegerField()
+
