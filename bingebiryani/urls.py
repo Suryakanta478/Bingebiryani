@@ -2,15 +2,18 @@ from django.contrib import admin
 from django.urls import path, include
 from hotel import views
 from django.contrib.sitemaps.views import sitemap
-#from myapp.sitemaps import MySitemap
 
-# 🔹 Sitemap config
-#sitemaps = {'pages': MySitemap}
+from django.contrib.sitemaps.views import sitemap
+from hotel.sitemaps import StaticSitemap
 
-# 🔹 URL patterns
+sitemaps = {
+    'static': StaticSitemap,
+}
+
 urlpatterns = [
-    # Sitemap
-   # path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='sitemap'),
+    ...
+    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='sitemap'),
+]
 
     # Admin
     path('admin/', admin.site.urls),
