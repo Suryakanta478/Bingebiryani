@@ -16,9 +16,8 @@ urlpatterns = [
     # Admin
     path('admin/', admin.site.urls),
 
-    # Home / Signup
-    path('', views.signup, name='signup'),
-    path('home/', views.home, name='home'),
+    # ✅ Home (main landing)
+    path('', views.home, name='home'),
 
     # Authentication
     path('signup/', views.signup, name='signup'),

@@ -6,7 +6,7 @@ class StaticSitemap(Sitemap):
     changefreq = 'daily'
 
     def items(self):
-        return ['home']   # ⚠️ yaha tera URL name hona chahiye
+        return ['signup', 'home', 'menu', 'booking']
 
     def location(self, item):
         return reverse(item)
